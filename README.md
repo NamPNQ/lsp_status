@@ -12,18 +12,20 @@ paq 'doums/lsp_status'
 ```lua
 local lspconfig = require'lspconfig'
 local lsp_status = require'lsp_status'
+
+-- register an handler for the method `$/progress`
 lsp_status.setup()
 
 local function on_attach(client)
   -- ... other stuff
 
-  -- define an handler for the method `$/progress`
+  -- get the client name
   lsp_status.on_attach(client)
 end
 
-lspconfig.rust_analyzer.setup {    -- Rust
+lspconfig.rust_analyzer.setup {  -- Rust Analyzer setup
   on_attach = on_attach,
-  -- add the "Work Done progress" reporting to capabilities
+  -- add `window/workDoneProgress` to default client capabilities
   capabilities = lsp_status.capabilities
 }
 ```
