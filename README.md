@@ -13,13 +13,13 @@ paq 'doums/lsp_status'
 local lspconfig = require'lspconfig'
 local lsp_status = require'lsp_status'
 
--- register an handler for the method `$/progress`
+-- register an handler for `$/progress` method
 lsp_status.setup()
 
 local function on_attach(client)
   -- ... other stuff
 
-  -- get the client name
+  -- get client name
   lsp_status.on_attach(client)
 end
 
@@ -30,11 +30,11 @@ lspconfig.rust_analyzer.setup {  -- Rust Analyzer setup
 }
 ```
 
-### get the status
+### get status
 
 The status is either the LSP client name or, if it exists, a text built from the last "Work done progress" notification.
 
-See the [spec](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#workDoneProgress) for the details.
+See the [spec](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#workDoneProgress) for details.
 
 ```lua
 require'lsp_status'.status()
