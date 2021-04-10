@@ -39,7 +39,7 @@ See the [spec](https://microsoft.github.io/language-server-protocol/specificatio
 ```lua
 require'lsp_status'.status()
 ```
-You can listen to the autocommand event `LspStatusChanged` to get notified when the status is updated.
+Listen to the autocommand event `LspStatusChanged` to get notified when the status is updated.
 
 ### license
 Mozilla Public License 2.0
