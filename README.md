@@ -17,11 +17,13 @@ lsp_status.setup()
 local function on_attach(client)
   -- ... other stuff
 
+  -- define an handler for the method `$/progress`
   lsp_status.on_attach(client)
 end
 
 lspconfig.rust_analyzer.setup {    -- Rust
   on_attach = on_attach,
+  -- add the "Work Done progress" reporting to capabilities
   capabilities = lsp_status.capabilities
 }
 ```
