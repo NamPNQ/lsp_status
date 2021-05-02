@@ -5,22 +5,25 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/. ]]
 local cmd = vim.cmd
 local lsp = vim.lsp
 local spinner = {'▖', '▘', '▝', '▗'}
-local clients = {}
-local works = {}
-local status = {}
+local clients = {} -- key by client ID and bufnr (meta)
+local works = {} -- key by token
+local status = {} -- key by bufnr
 
 local function push_status(work)
   local current = work.client_name
   current = string.format('%s %s', current, work.title)
   if work.message then current = string.format('%s %s', current, work.message) end
-  if work.percentage then current = string.format('%s %s%%%%', current, work.percentage) end
+  if work.percentage then current = string.format('%s %s%%', current, work.percentage) end
   if work.frame then
     current = string.format('%s %s', current, spinner[work.frame])
   end
   if work.done then
     current = string.format('%s done', current)
   end
-  table.insert(status, current)
+  if not status[work.bufnr] then
+    status[work.bufnr] = {}
+  end
+  table.insert(status[work.bufnr], current)
 end
 
 local function clean_work_done()
@@ -42,9 +45,12 @@ local function progress_callback(_, _, msg, client_id)
   local val = msg.value
   if val.kind then
     if val.kind == 'begin' then
+      local client = clients[client_id] or lsp.get_client_by_id(client_id)
+      if not client then return end
       works[msg.token] = {
         client_id = client_id,
-        client_name = clients[client_id] or '',
+        client_name = client.name,
+        bufnr = client.bufnr,
         title = val.title,
         message = val.message,
         percentage = val.percentage,
@@ -68,18 +74,16 @@ local function progress_callback(_, _, msg, client_id)
   clean_work_done()
 end
 
-local function get_status()
+local function get_status(bufnr)
   clean_stopped_clients()
-  if vim.tbl_isempty(status) then
-    local _, client = next(clients)
-    if client then
-      return client
-    else
-      return ''
-    end
+  if not bufnr then bufnr = 0 end
+  local client = clients[bufnr]
+  if not client then return '' end
+  if vim.tbl_isempty(status) or not status[bufnr] then
+    return client.name
   end
-  local temp = status[#status]
-  status = {}
+  local temp = status[bufnr][#status[bufnr]]
+  status[bufnr] = nil
   return temp
 end
 
@@ -89,10 +93,22 @@ capabilities.window.workDoneProgress = true
 
 local function setup()
   lsp.handlers['$/progress'] = progress_callback
+  local metaindex = function(tbl, key)
+    for _, data in pairs(tbl) do
+      if data.bufnr == key then
+        return data
+      end
+    end
+    return nil
+  end
+  setmetatable(clients, {__index = metaindex})
 end
 
-local function on_attach(client)
-  clients[client.id] = client.name
+local function on_attach(client, bufnr)
+  clients[client.id] = {
+    name = client.name,
+    bufnr = bufnr,
+  }
   cmd 'doautocmd User LspStatusChanged'
 end
 
