@@ -4,6 +4,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/. ]]
 
 local cmd = vim.cmd
 local lsp = vim.lsp
+local api = vim.api
 local spinner = {'▖', '▘', '▝', '▗'}
 local clients = {} -- key by client ID and bufnr (meta)
 local works = {} -- key by token
@@ -50,7 +51,7 @@ local function progress_callback(_, _, msg, client_id)
       works[msg.token] = {
         client_id = client_id,
         client_name = client.name,
-        bufnr = client.bufnr,
+        bufnr = client.bufnr or api.nvim_get_current_buf(),
         title = val.title,
         message = val.message,
         percentage = val.percentage,
