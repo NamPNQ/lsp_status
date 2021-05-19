@@ -4,33 +4,19 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/. ]]
 
 local cmd = vim.cmd
 local lsp = vim.lsp
-local api = vim.api
 local spinner = {'▖', '▘', '▝', '▗'}
 local clients = {} -- key by client ID and bufnr (meta)
-local works = {} -- key by token
-local status = {} -- key by bufnr
+local works = {} -- key by token and bufnr (meta)
 
-local function push_status(work)
-  local current = work.client_name
-  current = string.format('%s %s', current, work.title)
-  if work.message then current = string.format('%s %s', current, work.message) end
-  if work.percentage then current = string.format('%s %s%%', current, work.percentage) end
+local function build_status(work)
+  local status = work.client_name
+  status = string.format('%s %s', status, work.title)
+  if work.message then status = string.format('%s %s', status, work.message) end
+  if work.percentage then status = string.format('%s %s%%', status, work.percentage) end
   if work.frame then
-    current = string.format('%s %s', current, spinner[work.frame])
+    status = string.format('%s %s', status, spinner[work.frame])
   end
-  if work.done then
-    current = string.format('%s done', current)
-  end
-  if not status[work.bufnr] then
-    status[work.bufnr] = {}
-  end
-  table.insert(status[work.bufnr], current)
-end
-
-local function clean_work_done()
-  for token, work in pairs(works) do
-    if work.done == true then works[token] = nil end
-  end
+  return status
 end
 
 local function clean_stopped_clients()
@@ -51,7 +37,7 @@ local function progress_callback(_, _, msg, client_id)
       works[msg.token] = {
         client_id = client_id,
         client_name = client.name,
-        bufnr = client.bufnr or api.nvim_get_current_buf(),
+        bufnr = client.bufnr,
         title = val.title,
         message = val.message,
         percentage = val.percentage,
@@ -65,27 +51,24 @@ local function progress_callback(_, _, msg, client_id)
       local prev_frame = works[msg.token].frame
       works[msg.token].frame = prev_frame < #spinner and prev_frame + 1 or 1
     elseif val.kind == 'end' then
-      works[msg.token].message = val.message
-      works[msg.token].frame = nil
-      works[msg.token].done = true
+      works[msg.token] = nil
     end
-    push_status(works[msg.token])
   end
   cmd 'doautocmd User LspStatusChanged'
-  clean_work_done()
 end
 
 local function get_status(bufnr)
   clean_stopped_clients()
-  if not bufnr then bufnr = 0 end
+  if not bufnr then
+    bufnr = 0
+  end
   local client = clients[bufnr]
   if not client then return '' end
-  if vim.tbl_isempty(status) or not status[bufnr] then
-    return client.name
+  local work = works[bufnr]
+  if work then
+    return build_status(work)
   end
-  local temp = status[bufnr][#status[bufnr]]
-  status[bufnr] = nil
-  return temp
+  return client.name
 end
 
 local capabilities = lsp.protocol.make_client_capabilities()
@@ -103,6 +86,7 @@ local function setup()
     return nil
   end
   setmetatable(clients, {__index = metaindex})
+  setmetatable(works, {__index = metaindex})
 end
 
 local function on_attach(client, bufnr)
